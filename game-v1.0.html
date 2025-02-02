@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bad Hockey - Fixed Edition</title>
+
+  <!-- Phaser 3 from CDN (version 3.60.0) -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+
+  <style>
+    /* Basic red/black devilish style */
+    body {
+      margin: 0;
+      background: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    header {
+      background: #300;
+      padding: 20px;
+    }
+    header h1 {
+      font-size: 3rem;
+      margin: 0;
+      color: #ff0000;
+      text-shadow: 2px 2px 0 #000;
+      display: inline-block;
+    }
+    .flags {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+    }
+    .flags img {
+      width: 60px;
+      border: 2px solid #700;
+      border-radius: 4px;
+      box-shadow: 0 0 10px 2px #f00;
+      background: #400;
+      transition: transform 0.3s;
+    }
+    .flags img:hover {
+      transform: scale(1.2) rotate(-5deg);
+    }
+
+    .team-selection {
+      display: flex;
+      justify-content: center;
+      gap: 50px;
+      margin: 20px auto;
+      max-width: 1200px;
+      padding: 20px;
+    }
+    .team-panel {
+      width: 400px;
+      background: #222;
+      border: 2px solid #900;
+      padding: 20px;
+      border-radius: 5px;
+      text-align: left;
+    }
+    .team-panel h2 {
+      margin-top: 0;
+      color: #f00;
+      text-shadow: 1px 1px 0 #000;
+    }
+    label {
+      font-weight: bold;
+    }
+    select {
+      background: #900;
+      color: #fff;
+      border: 1px solid #fff;
+      border-radius: 4px;
+      padding: 5px;
+      margin: 5px 0;
+      cursor: pointer;
+    }
+    .roster h3 {
+      color: #ff8080;
+      margin: 10px 0 5px;
+    }
+    .roster li {
+      background: #333;
+      border: 1px solid #444;
+      margin: 2px 0;
+      padding: 5px;
+      border-radius: 3px;
+      font-size: 0.9rem;
+    }
+
+    .start-game-btn {
+      margin-top: 20px;
+      padding: 15px 30px;
+      font-size: 1.2rem;
+      background: #d00;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .start-game-btn:hover {
+      background: #a00;
+    }
+
+    #eventLog {
+      width: 100%;
+      max-width: 600px;
+      height: 250px;
+      margin: 20px auto;
+      background: #222;
+      border: 2px solid #900;
+      border-radius: 5px;
+      padding: 10px;
+      overflow-y: auto; /* Ensures a scrollbar when overflowing */
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    /* Optional scrollbar styling (WebKit) */
+    #eventLog::-webkit-scrollbar {
+      width: 8px;
+    }
+    #eventLog::-webkit-scrollbar-thumb {
+      background: #900;
+      border-radius: 5px;
+    }
+
+    #gameCanvas {
+      width: 1200px;
+      height: 700px;
+      margin: 0 auto;
+      border: 2px solid #fff;
+      display: none; /* hidden until Start Game */
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>BAD HOCKEY</h1>
+    <div class="flags">
+      <img src="https://flagcdn.com/ca.svg" alt="Canada">
+      <img src="https://flagcdn.com/fi.svg" alt="Finland">
+      <img src="https://flagcdn.com/se.svg" alt="Sweden">
+      <img src="https://flagcdn.com/us.svg" alt="USA">
+    </div>
+  </header>
+
+  <!-- Team selection panels -->
+  <div class="team-selection">
+    <div class="team-panel">
+      <h2>Team A</h2>
+      <label>Select Team:</label><br>
+      <select id="teamASelect" onchange="updateTeamRoster('A')"></select>
+      <div id="teamARoster" class="roster"></div>
+    </div>
+    <div class="team-panel">
+      <h2>Team B</h2>
+      <label>Select Team:</label><br>
+      <select id="teamBSelect" onchange="updateTeamRoster('B')"></select>
+      <div id="teamBRoster" class="roster"></div>
+    </div>
+  </div>
+
+  <button class="start-game-btn" onclick="startPhaserGame()">Start Game</button>
+
+  <div id="eventLog"></div>
+  <div id="gameCanvas"></div>
+
+  <script>
+  /*******************************************
+   * 1) Roster Data & Team Selection
+   *******************************************/
+  const ALL_TEAMS = {
+    "CANADA": {
+      color: 0xff0000, // red
+      players: [
+        { name: "Connor McDavid",  position: "Forward", isDefense: false, speed: 230, passSkill: 90, shotSkill: 100 },
+        { name: "Sidney Crosby",   position: "Forward", isDefense: false, speed: 210, passSkill: 85, shotSkill: 85 },
+        { name: "Nathan MacKinnon",position: "Forward", isDefense: false, speed: 225, passSkill: 85, shotSkill: 90 },
+        { name: "Cale Makar",      position: "Defense", isDefense: true,  speed: 220, passSkill: 80, shotSkill: 75 },
+        { name: "Shea Weber",      position: "Defense", isDefense: true,  speed: 170, passSkill: 50, shotSkill: 85 }
+      ],
+      goalies: [
+        { name: "Carey Price", position: "Goalie", speed: 120, passSkill: 30, shotSkill: 20 }
+      ]
+    },
+
+    "FINLAND": {
+      color: 0x0000ff, // blue
+      players: [
+        { name: "Aleksander Barkov", position: "Forward", isDefense: false, speed: 220, passSkill: 85, shotSkill: 85 },
+        { name: "Mikko Rantanen",    position: "Forward", isDefense: false, speed: 215, passSkill: 80, shotSkill: 90 },
+        { name: "Sebastian Aho",     position: "Forward", isDefense: false, speed: 220, passSkill: 85, shotSkill: 85 },
+        { name: "Miro Heiskanen",    position: "Defense", isDefense: true,  speed: 210, passSkill: 70, shotSkill: 70 },
+        { name: "Esa Lindell",       position: "Defense", isDefense: true,  speed: 170, passSkill: 55, shotSkill: 60 }
+      ],
+      goalies: [
+        { name: "Juuse Saros", position: "Goalie", speed: 120, passSkill: 30, shotSkill: 20 }
+      ]
+    },
+
+    "SWEDEN": {
+      color: 0xffff00, // yellow
+      players: [
+        { name: "Filip Forsberg",  position: "Forward", isDefense: false, speed: 210, passSkill: 80, shotSkill: 88 },
+        { name: "Mika Zibanejad",  position: "Forward", isDefense: false, speed: 215, passSkill: 80, shotSkill: 85 },
+        { name: "Elias Pettersson",position: "Forward", isDefense: false, speed: 220, passSkill: 90, shotSkill: 90 },
+        { name: "Victor Hedman",   position: "Defense", isDefense: true,  speed: 200, passSkill: 70, shotSkill: 80 },
+        { name: "Erik Karlsson",   position: "Defense", isDefense: true,  speed: 190, passSkill: 65, shotSkill: 78 }
+      ],
+      goalies: [
+        { name: "Henrik Lundqvist", position: "Goalie", speed: 120, passSkill: 30, shotSkill: 20 }
+      ]
+    },
+
+    "USA": {
+      color: 0x00ff00, // green
+      players: [
+        { name: "Auston Matthews", position: "Forward", isDefense: false, speed: 220, passSkill: 85, shotSkill: 90 },
+        { name: "Jack Eichel",     position: "Forward", isDefense: false, speed: 210, passSkill: 80, shotSkill: 88 },
+        { name: "Matthew Tkachuk", position: "Forward", isDefense: false, speed: 205, passSkill: 75, shotSkill: 85 },
+        { name: "Adam Fox",        position: "Defense", isDefense: true,  speed: 200, passSkill: 65, shotSkill: 70 },
+        { name: "Quinn Hughes",    position: "Defense", isDefense: true,  speed: 190, passSkill: 60, shotSkill: 70 }
+      ],
+      goalies: [
+        { name: "Connor Hellebuyck", position: "Goalie", speed: 120, passSkill: 30, shotSkill: 20 }
+      ]
+    }
+  };
+
+  // Fill <select> with team keys
+  const teamASelect = document.getElementById("teamASelect");
+  const teamBSelect = document.getElementById("teamBSelect");
+  const teamARoster = document.getElementById("teamARoster");
+  const teamBRoster = document.getElementById("teamBRoster");
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const keys = Object.keys(ALL_TEAMS);
+    keys.forEach(k => {
+      let optA = document.createElement('option');
+      optA.value = k; optA.textContent = k;
+      teamASelect.appendChild(optA);
+
+      let optB = document.createElement('option');
+      optB.value = k; optB.textContent = k;
+      teamBSelect.appendChild(optB);
+    });
+    teamASelect.selectedIndex = 0; // e.g. Canada
+    teamBSelect.selectedIndex = 1; // e.g. Finland
+    updateTeamRoster('A');
+    updateTeamRoster('B');
+  });
+
+  function updateTeamRoster(side) {
+    const selectEl = (side === 'A') ? teamASelect : teamBSelect;
+    const rosterDiv = (side === 'A') ? teamARoster : teamBRoster;
+    const teamKey = selectEl.value;
+    const data = ALL_TEAMS[teamKey];
+    if (!data) {
+      rosterDiv.innerHTML = `<p style="color:red">No data for ${teamKey}</p>`;
+      return;
+    }
+    let html = `<h3>${teamKey} Roster</h3><ul>`;
+    data.players.forEach(p => {
+      const pos = p.isDefense ? "Defense" : "Forward";
+      html += `<li>
+        <strong>${p.name}</strong> (${pos})
+        <br>Speed:${p.speed}, Pass:${p.passSkill}, Shot:${p.shotSkill}
+      </li>`;
+    });
+    data.goalies.forEach(g => {
+      html += `<li>
+        <strong>${g.name}</strong> (Goalie)
+        <br>Speed:${g.speed}, Pass:${g.passSkill}, Shot:${g.shotSkill}
+      </li>`;
+    });
+    html += `</ul>`;
+    rosterDiv.innerHTML = html;
+  }
+
+  /*******************************************
+   * 2) Building Teams & Starting the Game
+   *******************************************/
+  let phaserGame = null; // global reference
+  function startPhaserGame() {
+    if (phaserGame) {
+      phaserGame.destroy(true);
+      phaserGame = null;
+    }
+    document.getElementById("gameCanvas").style.display = "block";
+
+    // Create new Phaser game
+    phaserGame = new Phaser.Game({
+      type: Phaser.AUTO,
+      width: 1200,
+      height: 700,
+      parent: 'gameCanvas',
+      physics: {
+        default: 'arcade',
+        arcade: {
+          gravity: { y: 0 },
+          debug: false
+        }
+      },
+      scene: MyHockeyScene
+    });
+  }
+
+  // Helper to build a "team" object from ALL_TEAMS data
+  function buildTeam(teamKey, isTeamA) {
+    const data = ALL_TEAMS[teamKey];
+    return {
+      name: teamKey,
+      color: data.color,
+      players: data.players.map(p => ({
+        ...p, container: null, originalPosition: {x:0, y:0}
+      })),
+      goalie: {
+        ...data.goalies[0], container: null, originalPosition: {x:0, y:0}
+      },
+      goals: 0,
+      isTeamA
+    };
+  }
+
+  /*******************************************
+   * 3) Our Scene Class
+   *******************************************/
+  class MyHockeyScene extends Phaser.Scene {
+    constructor() {
+      super({ key: 'MyHockeyScene' });
+    }
+
+    create() {
+      // Build teams
+      this.teamA = buildTeam(teamASelect.value, true);
+      this.teamB = buildTeam(teamBSelect.value, false);
+      this.isGameActive = true;
+      this.isPaused = false;
+      this.hasPuck = null;
+      this.gameTimer = 180; // 3 min
+      this.eventLog = [];
+
+      // Create Rink
+      this.createField();
+
+      // Create Players
+      this.createTeamPlayers(this.teamA);
+      this.createTeamPlayers(this.teamB);
+
+      // Create Puck
+      this.createPuck();
+
+      // Create UI (score text, timer, no button here though)
+      this.createUI();
+      this.updateScoreboard();
+
+      // Overlap for puck pickup
+      [...this.teamA.players, this.teamA.goalie].forEach(p => {
+        this.physics.add.overlap(p.container, this.puck, () => {
+          if (!this.hasPuck) {
+            this.hasPuck = p;
+            this.puck.body.setVelocity(0,0);
+            this.logEvent(`${p.name} picked up the puck!`);
+          }
+        });
+      });
+      [...this.teamB.players, this.teamB.goalie].forEach(p => {
+        this.physics.add.overlap(p.container, this.puck, () => {
+          if (!this.hasPuck) {
+            this.hasPuck = p;
+            this.puck.body.setVelocity(0,0);
+            this.logEvent(`${p.name} picked up the puck!`);
+          }
+        });
+      });
+
+      // Timer event
+      this.time.addEvent({
+        delay: 1000,
+        loop: true,
+        callback: () => {
+          if (!this.isGameActive || this.isPaused) return;
+          this.gameTimer--;
+          this.updateScoreboard();
+          if (this.gameTimer <= 0) {
+            this.isGameActive = false;
+            this.scoreText.setText("Time's up!");
+            this.logEvent("Game Over! Final Score: " +
+              `${this.teamA.name} ${this.teamA.goals} - ` +
+              `${this.teamB.goals} ${this.teamB.name}`
+            );
+          }
+        }
+      });
+
+      // Press SPACE to shoot if you have the puck
+      this.input.keyboard.on('keydown-SPACE', () => {
+        if (this.hasPuck && this.isGameActive && !this.isPaused) {
+          this.attemptShot(this.hasPuck);
+        }
+      });
+    }
+
+    update() {
+      if (!this.isGameActive || this.isPaused) return;
+
+      // Puck friction if free
+      if (!this.hasPuck) {
+        this.puck.body.velocity.x *= 0.98;
+        this.puck.body.velocity.y *= 0.98;
+      } else {
+        // stick to carrier
+        this.puck.x = this.hasPuck.container.x;
+        this.puck.y = this.hasPuck.container.y;
+      }
+
+      // AI
+      this.updateTeamAI(this.teamA, this.teamB);
+      this.updateTeamAI(this.teamB, this.teamA);
+
+      this.checkGoals();
+    }
+
+    createField() {
+      this.physics.world.setBounds(50, 100, 1100, 500);
+
+      let g = this.add.graphics();
+      // Stadium background (simple)
+      g.fillStyle(0x222222, 1);
+      g.fillRect(0, 0, 1200, 700);
+
+      // Rink lines
+      g.lineStyle(4, 0xffffff, 1);
+      g.strokeRoundedRect(50, 100, 1100, 500, 50);
+
+      // center line
+      g.lineStyle(2, 0xff0000, 1);
+      g.beginPath();
+      g.moveTo(600, 100);
+      g.lineTo(600, 600);
+      g.strokePath();
+
+      // blue lines
+      g.lineStyle(2, 0x0000ff, 1);
+      g.beginPath();
+      g.moveTo(350, 100);
+      g.lineTo(350, 600);
+      g.strokePath();
+      g.beginPath();
+      g.moveTo(850, 100);
+      g.lineTo(850, 600);
+      g.strokePath();
+
+      // goals
+      g.lineStyle(2, 0xffffff, 1);
+      g.strokeRect(50, 250, 100, 200);
+      g.strokeRect(1050, 250, 100, 200);
+    }
+
+    createTeamPlayers(team) {
+      // 3 forwards near center, 2 defenders near x= (TEAM_A => 200, TEAM_B => 1000), goalie near net
+      const baseX = team.isTeamA ? 300 : 900;
+      const baseY = 350;
+      let forwardCount = 0;
+      let defenseCount = 0;
+
+      team.players.forEach(p => {
+        let x, y;
+        if (!p.isDefense) {
+          x = baseX;
+          y = baseY + (forwardCount*40 - 40);
+          forwardCount++;
+        } else {
+          x = team.isTeamA ? 200 : 1000;
+          y = baseY + (defenseCount*50 - 25);
+          defenseCount++;
+        }
+        const cont = this.createPlayerContainer(x, y, team.color, p.isDefense ? "D" : "F");
+        p.container = cont;
+        p.originalPosition = { x, y };
+        p.team = team;  // reference back
+      });
+
+      // Goalie
+      const gx = team.isTeamA ? 100 : 1100;
+      const gy = 350;
+      const gCont = this.createPlayerContainer(gx, gy, 0xffffff, "G");
+      team.goalie.container = gCont;
+      team.goalie.originalPosition = { x: gx, y: gy };
+      team.goalie.team = team;
+    }
+
+    createPlayerContainer(x, y, color, labelText) {
+      let container = this.add.container(x, y);
+
+      let circle = this.add.graphics();
+      circle.fillStyle(color);
+      circle.lineStyle(2, 0x000000);
+      circle.fillCircle(0, 0, 15);
+      circle.strokeCircle(0, 0, 15);
+
+      let txt = this.add.text(0, 0, labelText, {
+        fontSize: '14px', color: '#000', fontStyle: 'bold'
+      }).setOrigin(0.5);
+
+      container.add(circle);
+      container.add(txt);
+
+      this.physics.add.existing(container);
+      container.body.setCircle(15);
+      container.body.setCollideWorldBounds(true);
+
+      return container;
+    }
+
+    createPuck() {
+      this.puck = this.add.graphics();
+      this.puck.x = 600;
+      this.puck.y = 350;
+      this.puck.fillStyle(0x000000);
+      this.puck.lineStyle(2, 0xffffff);
+      this.puck.fillCircle(0, 0, 8);
+      this.puck.strokeCircle(0, 0, 8);
+
+      this.physics.add.existing(this.puck);
+      this.puck.body.setCircle(8);
+      this.puck.body.setCollideWorldBounds(true);
+      this.puck.body.setBounce(1,1);
+      this.puck.body.setVelocity(0,0);
+    }
+
+    createUI() {
+      this.scoreText = this.add.text(600, 60, "", {
+        fontSize: "28px", fill: "#fff", backgroundColor: "#000",
+        padding: { x: 20, y: 10 }
+      }).setOrigin(0.5);
+
+      // No pause button here for brevity. If you want, add one
+      // similar to older code with a .setInteractive()
+    }
+
+    logEvent(msg) {
+      this.eventLog.unshift(msg);
+      // keep last 25 lines
+      this.eventLog.splice(25);
+      let logDiv = document.getElementById('eventLog');
+      logDiv.innerHTML = this.eventLog.map(e => `<div>${e}</div>`).join("");
+    }
+
+    updateScoreboard() {
+      this.scoreText.setText(
+        `${this.teamA.name}: ${this.teamA.goals} - TIME: ${this.gameTimer}s - ${this.teamB.name}: ${this.teamB.goals}`
+      );
+    }
+
+    /****************************************
+     * AI - No line changes
+     ****************************************/
+    updateTeamAI(myTeam, oppTeam) {
+      // If puck is in "myTeam's offense zone," let defenders cross center
+      // if myTeam is the left side => offense zone => x>600
+      const puckX = this.puck.x;
+      const isOffensive = myTeam.isTeamA ? (puckX>600) : (puckX<600);
+
+      // Forwards/defenders
+      myTeam.players.forEach(p => {
+        if (!p.container) return;
+        if (this.hasPuck === p) {
+          this.handlePuckCarrier(p);
+        } else {
+          this.decideMovement(p, isOffensive);
+        }
+      });
+
+      // goalie
+      this.defendGoal(myTeam.goalie);
+    }
+
+    decideMovement(player, isOffensive) {
+      // let them chase the puck if not hasPuck
+      let dist = Phaser.Math.Distance.Between(
+        player.container.x, player.container.y,
+        this.puck.x, this.puck.y
+      );
+      if (!this.hasPuck && dist < 400) {
+        // chase
+        this.chasePuck(player, isOffensive);
+      } else {
+        this.maintainPosition(player);
+      }
+    }
+
+    chasePuck(player, canCrossCenter) {
+      // If canCrossCenter => normal chase
+      // If not, clamp x=600
+      const px = this.puck.x;
+      const isTeamA = player.team.isTeamA;
+      if (!canCrossCenter) {
+        if (isTeamA && px>600) {
+          this.movePlayerClamped(player, { x: 600, y: this.puck.y });
+          return;
+        }
+        if (!isTeamA && px<600) {
+          this.movePlayerClamped(player, { x: 600, y: this.puck.y });
+          return;
+        }
+      }
+      this.movePlayerTowards(player, this.puck.x, this.puck.y, player.speed);
+    }
+
+    movePlayerClamped(player, target) {
+      this.movePlayerTowards(player, target.x, target.y, player.speed);
+    }
+
+    movePlayerTowards(player, tx, ty, spd) {
+      let angle = Phaser.Math.Angle.Between(player.container.x, player.container.y, tx, ty);
+      player.container.body.setVelocity(
+        Math.cos(angle)*spd,
+        Math.sin(angle)*spd
+      );
+    }
+
+    handlePuckCarrier(player) {
+      // Attack net
+      let netX = player.team.isTeamA ? 1050 : 50;
+      this.movePlayerTowards(player, netX, 350, player.speed);
+
+      // bigger chance to shoot if near net
+      let distToNet = Phaser.Math.Distance.Between(player.container.x, player.container.y, netX, 350);
+      if (distToNet < 120) {
+        // forcibly shoot
+        if (Phaser.Math.Between(1,100) < 30) {
+          this.attemptShot(player);
+        }
+        return;
+      }
+
+      // random pass or shoot
+      if (Phaser.Math.Between(1,100) < 5) {
+        // pass
+        let mate = this.findOpenTeammate(player, player.team.players);
+        if (mate) this.passPuck(player, mate);
+      }
+      if (Phaser.Math.Between(1,100) < 5) {
+        // shoot
+        this.attemptShot(player);
+      }
+    }
+
+    maintainPosition(player) {
+      let dist = Phaser.Math.Distance.Between(
+        player.container.x, player.container.y,
+        player.originalPosition.x, player.originalPosition.y
+      );
+      if (dist > 50) {
+        this.movePlayerTowards(player, player.originalPosition.x, player.originalPosition.y, (player.speed||200)*0.3);
+      } else {
+        player.container.body.setVelocity(0,0);
+      }
+    }
+
+    defendGoal(goalie) {
+      // follow puck vertically in some small range
+      let gx = goalie.container.x, gy = goalie.container.y;
+      let py = this.puck.y;
+      const maxY = 80;
+      let targetY = Phaser.Math.Clamp(py, goalie.originalPosition.y - maxY, goalie.originalPosition.y + maxY);
+      let dy = targetY - gy;
+      let spd = (goalie.speed||120)*0.4;
+      if (Math.abs(dy)>5) {
+        goalie.container.body.setVelocityY(dy>0 ? spd : -spd);
+      } else {
+        goalie.container.body.setVelocityY(0);
+      }
+    }
+
+    /****************************************
+     * Passing & Shooting
+     ****************************************/
+    findOpenTeammate(carrier, teammates) {
+      const passRange = 300;
+      let possible = teammates.filter(p => p !== carrier && p.container);
+      possible = possible.filter(p => {
+        let d = Phaser.Math.Distance.Between(carrier.container.x, carrier.container.y, p.container.x, p.container.y);
+        return d < passRange;
+      });
+      if (!possible.length) return null;
+      possible.sort((a,b)=>(b.passSkill||50)-(a.passSkill||50));
+      return possible[0];
+    }
+
+    passPuck(carrier, target) {
+      if (this.hasPuck !== carrier) return;
+      this.logEvent(`${carrier.name} passes to ${target.name}`);
+      let angle = Phaser.Math.Angle.Between(
+        carrier.container.x, carrier.container.y,
+        target.container.x, target.container.y
+      );
+      let speed = 300 + (carrier.passSkill||50);
+      this.puck.body.setVelocity(Math.cos(angle)*speed, Math.sin(angle)*speed);
+      this.hasPuck = null;
+    }
+
+    attemptShot(player) {
+      if (this.hasPuck !== player) return;
+      this.logEvent(`${player.name} takes a shot!`);
+      let goalX = player.container.x<600 ? 1150 : 50;
+      let angle = Phaser.Math.Angle.Between(player.container.x, player.container.y, goalX, 350);
+      let shotSpeed = 400 + (player.shotSkill||50); // how much is shotspeed if shotskill is 50 = 450
+      this.puck.body.setVelocity(Math.cos(angle)*shotSpeed, Math.sin(angle)*shotSpeed);
+      this.hasPuck = null;
+    }
+
+    /****************************************
+     * Check Goals
+     ****************************************/
+    checkGoals() {
+      // If puck.x < 50 => Team B scores
+      if (this.puck.x<50 && this.puck.y>250 && this.puck.y<450) {
+        this.teamB.goals++;
+        this.handleGoalScored(this.teamB);
+      }
+      else if (this.puck.x>1150 && this.puck.y>250 && this.puck.y<450) {
+        this.teamA.goals++;
+        this.handleGoalScored(this.teamA);
+      }
+      this.updateScoreboard();
+    }
+
+    handleGoalScored(scoringTeam) {
+      this.isGameActive = false;
+      this.logEvent(`GOAL!!! ${scoringTeam.name} scored!`);
+      // simple tween flash
+      this.tweens.add({
+        targets: this.scoreText,
+        backgroundColor: "#0f0", // green
+        duration: 200,
+        yoyo: true,
+        repeat: 4,
+        onComplete: () => {
+          this.scoreText.setBackgroundColor("#000");
+        }
+      });
+
+      this.time.addEvent({
+        delay: 2000,
+        callback: () => {
+          // reset positions
+          this.resetPositions(this.teamA);
+          this.resetPositions(this.teamB);
+          this.puck.x=600; this.puck.y=350;
+          this.puck.body.setVelocity(0,0);
+          this.hasPuck = null;
+          this.isGameActive = true;
+        }
+      });
+    }
+
+    resetPositions(team) {
+      team.players.forEach(p => {
+        p.container.x = p.originalPosition.x;
+        p.container.y = p.originalPosition.y;
+        p.container.body.setVelocity(0,0);
+      });
+      team.goalie.container.x = team.goalie.originalPosition.x;
+      team.goalie.container.y = team.goalie.originalPosition.y;
+      team.goalie.container.body.setVelocity(0,0);
+    }
+  }
+  </script>
+</body>
+</html>
