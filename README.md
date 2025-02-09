@@ -1,15 +1,37 @@
-# bad-hockey
-hockey simulation(cirremtly at dev) stage.
+# 🏒 Bad Hockey 🏒
 
-my plan is to get the main version ready until the 4 nations tournament begins. The game is my first visual game and im eager to learn  so plz dot´nt be too harsh :D
-the game is still quite buggy and the players aint doing what they are told, but im getting there slowly. if somebody want to help me, let me know!
+Welcome to **Bad Hockey**, the hockey simulation game that's currently in development and, well, a bit rough around the edges. But hey, Rome wasn't built in a day, and neither was Wayne Gretzky's career!
 
-in future we can play this over interwebs, mobile, tablet, desktop, laptop and pretty much any device with internet or not.
+## 🚀 Current Status: Development Chaos 🚀
 
-my plan is to have all 4 nations teams players and linechanges working. The players have stamina, strenght, speed, age etc etc.. and many players have special skills that can lead you to easy victory if the stars align right that night for you.
+The game is in its **early development stage**, which means it's buggy, the players don't always listen (kind of like real hockey players), and the AI is still learning how to skate. But don't worry, we're getting there slowly but surely. If you're interested in helping out, feel free to reach out! We could use all the help we can get, especially if you know how to make virtual players stop skating into the boards.
 
-this is still standalone versio "AI" vs "AI", soon i will be introducin local multiplayer (same pc/laptop), mobile/tablet version (online and offline) and also multiplayer over internet with friends or randoms.
+### 🎮 Future Plans 🎮
 
-localization is also in plans for few countries, sweden, usa and canada and maybe even more if people get interested, after the 4 nations i will start focusin on NHL and working on v2 of the game and it should be quite big change. will see!
+- **Multiplayer Madness**: Soon, you'll be able to play locally on the same PC/laptop, or take the game on the go with mobile/tablet versions (both online and offline). And yes, we're working on multiplayer over the internet so you can challenge your friends or random strangers to a game of virtual hockey.
+  
+- **Localization Love**: We plan to localize the game for a few countries, including Sweden, the USA, and Canada. If there's enough interest, we might even add more languages. Because nothing says "hockey" like yelling at your screen in multiple languages.
 
-If you are intersted about the project, let me know*"
+- **NHL Dreams**: After the 4 Nations Tournament, we'll shift our focus to the NHL and start working on **Version 2** of the game. Expect some big changes and hopefully fewer bugs.
+
+## 🛠️ Features (Planned and Current) 🛠️
+
+- **Player Attributes**: Players have stamina, strength, speed, age, and more. Some players even have special skills that could lead you to victory... if the stars align just right.
+  
+- **Standalone AI vs AI**: For now, it's just AI vs AI, but we're working on adding local multiplayer and online multiplayer soon. Because who doesn't want to lose to their friends in a virtual hockey game?
+
+- **3D Version in the Works**: Yes, you read that right! We're working on a **3D version** of the game using Python. Because 2D hockey is so last season.
+
+## 🤝 How You Can Help 🤝
+
+If you're interested in the project and want to contribute, let us know! Whether you're a coder, a designer, or just someone who really loves hockey, we'd love to have you on board. Plus, you'll get bragging rights when the game becomes the next big thing.
+
+## 📅 Release Timeline 📅
+
+Our goal is to have the main version ready by the time the **4 Nations Tournament** begins. Fingers crossed, we'll make it! If not, well, there's always next season.
+
+## 🎉 Final Thoughts 🎉
+
+Thanks for checking out **Bad Hockey**! It's my first visual game, so please be kind (or at least constructive) with your feedback. And remember, even if the game is a bit buggy now, it's all part of the journey. After all, even the best hockey players started out falling on the ice.
+
+Let's make this game a slap shot success! 🏒🥅
