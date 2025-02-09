@@ -1,4 +1,4 @@
-# 🏒 Bad Hockey 🏒
+# 🏒 Bad Hockey 🏒 BE AWARE THIS IS NOT PLAYABLE GAME AT ALL YET, JUST LITTLE DEMO HOW IT LOOKS LIKE NOW :)
 
 Welcome to **Bad Hockey**, the hockey simulation game that's currently in development and, well, a bit rough around the edges. But hey, Rome wasn't built in a day, and neither was Wayne Gretzky's career!
 
